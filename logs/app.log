@@ -1,0 +1,73 @@
+2026-06-03 11:33:23 | INFO     | app.main | VA backend started — base_dir=C:\projects\VA  port=8001
+2026-06-03 11:33:45 | INFO     | app.services.model_service | VA job fa164e99-299c-47ca-931e-c395d28d0705 starting
+2026-06-03 11:33:45 | INFO     | app.routes.model | Submitted VA job fa164e99-299c-47ca-931e-c395d28d0705  basis=VM21PA  method=StdScn  months=480
+2026-06-03 11:33:45 | INFO     | app.services.model_service | VA job fa164e99-299c-47ca-931e-c395d28d0705 cmd: python run.py --reserve-basis VM21PA --reserve-method StdScn --months 480
+2026-06-03 11:33:45 | ERROR    | app.services.model_service | VA job fa164e99-299c-47ca-931e-c395d28d0705 raised an exception after 0.00s
+Traceback (most recent call last):
+  File "C:\projects\VA\app\services\model_service.py", line 72, in _execute
+    proc = subprocess.Popen(
+        cmd,
+    ...<4 lines>...
+        bufsize=1,
+    )
+  File "C:\Users\vmuser\AppData\Local\Programs\Python\Python314\Lib\subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vmuser\AppData\Local\Programs\Python\Python314\Lib\subprocess.py", line 1553, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+                             # no special security
+                             ^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+                             cwd,
+                             ^^^^
+                             startupinfo)
+                             ^^^^^^^^^^^^
+NotADirectoryError: [WinError 267] The directory name is invalid
+2026-06-03 11:42:44 | INFO     | app.services.model_service | VA job a3c7bcd4-5deb-4352-a575-57d356194d40 starting
+2026-06-03 11:42:44 | INFO     | app.services.model_service | VA job a3c7bcd4-5deb-4352-a575-57d356194d40 cmd: python run.py --reserve-basis VM21PA --reserve-method StdScn --months 480
+2026-06-03 11:42:44 | ERROR    | app.services.model_service | VA job a3c7bcd4-5deb-4352-a575-57d356194d40 raised an exception after 0.00s
+Traceback (most recent call last):
+  File "C:\projects\VA\app\services\model_service.py", line 72, in _execute
+    proc = subprocess.Popen(
+        cmd,
+    ...<4 lines>...
+        bufsize=1,
+    )
+  File "C:\Users\vmuser\AppData\Local\Programs\Python\Python314\Lib\subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vmuser\AppData\Local\Programs\Python\Python314\Lib\subprocess.py", line 1553, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+                             # no special security
+                             ^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+                             cwd,
+                             ^^^^
+                             startupinfo)
+                             ^^^^^^^^^^^^
+NotADirectoryError: [WinError 267] The directory name is invalid
+2026-06-03 11:42:44 | INFO     | app.routes.model | Submitted VA job a3c7bcd4-5deb-4352-a575-57d356194d40  basis=VM21PA  method=StdScn  months=480
+2026-06-03 12:11:19 | INFO     | app.main | VA backend started — base_dir=C:\projects\VA  port=8001
+2026-06-03 12:13:28 | INFO     | app.main | VA backend started — base_dir=C:\projects\VA  port=8001
+2026-06-03 12:14:36 | INFO     | app.main | VA backend started — base_dir=C:\projects\VA  port=8001
+2026-06-03 12:42:40 | INFO     | app.main | VA backend started — base_dir=C:\projects\VA  port=8001
+2026-06-03 12:59:49 | INFO     | app.main | VA backend started — base_dir=C:\projects\VA  port=8001
+2026-06-05 06:27:06 | INFO     | app.main | VA backend started — base_dir=C:\projects\VA  port=8001
+2026-06-05 11:47:36 | INFO     | app.main | VA backend started â€” base_dir=C:\projects\VA  port=8001
+2026-06-05 15:18:13 | INFO     | app.main | VA backend started â€” base_dir=C:\projects\VA  port=8001
