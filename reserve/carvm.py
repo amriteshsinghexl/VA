@@ -138,6 +138,7 @@ def calculate_carvm(
     # Assemble output
     time_cols = [c for c in _TIME_COLS if c in dec_cf.columns]
     df = dec_cf[time_cols].copy()
+    df["disc_factor"]   = disc             # pass-through for formula traceability
     df["fund_at_me"]    = fund_at_me
     df["csv_at_me"]     = csv_at_me
     df["annuity_at_me"] = annuity_at_me
@@ -157,7 +158,7 @@ def _build_zero_carvm(dec_cf: pd.DataFrame) -> pd.DataFrame:
     """Return all-zero CARVM DataFrame (non-NYREG213+CARVM bases)."""
     time_cols = [c for c in _TIME_COLS if c in dec_cf.columns]
     df = dec_cf[time_cols].copy()
-    for col in ("fund_at_me", "csv_at_me", "annuity_at_me",
+    for col in ("disc_factor", "fund_at_me", "csv_at_me", "annuity_at_me",
                 "pv_csv", "pv_annuity", "pv_max", "carvm_reserve"):
         df[col] = 0.0
     df.index.name = "projection_period"

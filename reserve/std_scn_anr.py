@@ -181,8 +181,9 @@ def calculate_std_scn_anr(
     time_cols = [c for c in _TIME_COLS if c in dec_cf.columns]
     df = dec_cf[time_cols].copy()
 
-    df["std_scn_fund"] = n_arr
-    df["accum_factor"] = accum_factor
+    df["std_scn_fund"]       = n_arr
+    df["disc_factor_shock"]  = disc_shock     # pass-through for formula traceability
+    df["accum_factor"]       = accum_factor
     df["accum_fund"]   = x_arr
     df["me_charge"]    = p_me
     df["imf_charge"]   = r_imf

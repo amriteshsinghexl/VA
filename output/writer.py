@@ -19,16 +19,18 @@ from __future__ import annotations
 import datetime
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 
 import pandas as pd
 from openpyxl import Workbook
+from openpyxl.comments import Comment
 from openpyxl.styles import (
     Alignment, Border, Font, PatternFill, Side
 )
 from openpyxl.utils import get_column_letter
 
 from loaders.warnings import get_warnings
+from output.formula_registry import ColFormula, build_registry
 
 
 # ---------------------------------------------------------------------------
@@ -152,6 +154,12 @@ def write_output(
     wb = Workbook()
     wb.remove(wb.active)          # remove default blank sheet
 
+    # ---- Build formula registry (AST-derived + policy constants) ------------
+    try:
+        formula_reg = build_registry(policy, config)
+    except Exception:
+        formula_reg = {}
+
     # ---- Summary sheet -------------------------------------------------------
     _write_summary_sheet(wb, policy, config, reserve)
 
@@ -173,7 +181,10 @@ def write_output(
         ("14_Reserve_Summary", reserve),
     ]
     for name, df in sheets:
-        _write_data_sheet(wb, name, df)
+        _write_data_sheet(wb, name, df, col_formulas=formula_reg.get(name, {}))
+
+    # ---- Formula Reference sheet --------------------------------------------
+    _write_formula_ref_sheet(wb, formula_reg)
 
     # ---- Warnings sheet ------------------------------------------------------
     _write_warnings_sheet(wb)
@@ -299,8 +310,13 @@ def _write_summary_sheet(
     _apply_thin_border(ws, row_start=1, row_end=ws.max_row, col_start=1, col_end=2)
 
 
-def _write_data_sheet(wb: Workbook, name: str, df: pd.DataFrame) -> None:
-    """Write one projection DataFrame with full formatting."""
+def _write_data_sheet(
+    wb: Workbook,
+    name: str,
+    df: pd.DataFrame,
+    col_formulas: Optional[Dict[str, ColFormula]] = None,
+) -> None:
+    """Write one projection DataFrame with full formatting and live Excel formulas."""
     tab_colour, hdr_fill = _SHEET_CATALOGUE.get(name, (_C.TAB_WARN, _C.HDR_WARN))
     ws = wb.create_sheet(name)
     ws.sheet_properties.tabColor = tab_colour
@@ -309,9 +325,16 @@ def _write_data_sheet(wb: Workbook, name: str, df: pd.DataFrame) -> None:
         ws.append(["(no data)"])
         return
 
+    col_formulas = col_formulas or {}
+
     # Reset index so projection_period becomes column 1
     df_out = df.reset_index()
     columns = list(df_out.columns)
+
+    # Build column-letter map: {col_name: excel_letter} for formula resolution
+    col_letter_map = {col: get_column_letter(i) for i, col in enumerate(columns, 1)}
+    first_data_row = 2
+    last_data_row  = 1 + len(df_out)
 
     # ---- Header row ---------------------------------------------------------
     hdr_fill_obj  = PatternFill("solid", fgColor=hdr_fill)
@@ -327,6 +350,12 @@ def _write_data_sheet(wb: Workbook, name: str, df: pd.DataFrame) -> None:
         cell.font      = hdr_font_obj
         cell.alignment = hdr_align_obj
         cell.border    = thin_bottom
+        # Add formula description as a cell comment on the header
+        cf = col_formulas.get(col_name)
+        if cf and cf.description:
+            template = cf.first_row if cf.first_row else cf.rest_rows
+            comment_text = f"{cf.description}\n\nFormula: {template}\nSource: {cf.source}"
+            cell.comment = Comment(comment_text, "VA Model")
 
     # ---- Data rows ----------------------------------------------------------
     alt_fill = PatternFill("solid", fgColor=_C.ROW_ALT)
@@ -346,6 +375,18 @@ def _write_data_sheet(wb: Workbook, name: str, df: pd.DataFrame) -> None:
             # Alignment
             cell.alignment = Alignment(horizontal="right" if _is_numeric_col(df_out, col_name)
                                        else "left", vertical="center")
+            # Live Excel formula — overwrite the plain value if a formula exists
+            cf = col_formulas.get(col_name)
+            if cf and (cf.first_row or cf.rest_rows):
+                is_first = (row_idx == first_data_row)
+                template = cf.first_row if is_first else cf.rest_rows
+                if template:
+                    formula = _resolve_formula(
+                        template, col_letter_map, row_idx,
+                        first_data_row, last_data_row,
+                    )
+                    if formula:
+                        cell.value = formula
 
     # ---- Column widths (auto-fit based on content) --------------------------
     for col_idx, col_name in enumerate(columns, 1):
@@ -368,6 +409,105 @@ def _write_data_sheet(wb: Workbook, name: str, df: pd.DataFrame) -> None:
 
     # ---- Auto-filter on header row ------------------------------------------
     ws.auto_filter.ref = f"A1:{get_column_letter(len(columns))}1"
+
+
+def _resolve_formula(
+    template: str,
+    col_letter_map: Dict[str, str],
+    row: int,
+    first_data_row: int,
+    last_data_row: int,
+) -> str:
+    """
+    Resolve placeholder references in an Excel formula template.
+
+    Placeholders:
+        [col_name]       → {letter}{row}          (same row, named column)
+        [prev:col_name]  → {letter}{row-1}         (previous row; 0 on first row)
+        [next:col_name]  → {letter}{row+1}         (next row)
+        [last:col_name]  → {letter}{last_data_row} (last data row, for ranges)
+
+    Returns the resolved formula string, or "" if the template is empty.
+    """
+    if not template:
+        return ""
+
+    def _replace(m: re.Match) -> str:
+        modifier  = m.group(1) or ""   # "prev:", "next:", "last:", or ""
+        col_name  = m.group(2)
+        letter    = col_letter_map.get(col_name)
+        if not letter:
+            return f"[{modifier}{col_name}]"   # leave unresolved — column not in sheet
+        if modifier == "prev:":
+            ref_row = row - 1
+            if ref_row < first_data_row:
+                return "0"             # no predecessor on the first data row
+            return f"{letter}{ref_row}"
+        if modifier == "next:":
+            ref_row = row + 1
+            if ref_row > last_data_row:
+                return "0"             # no successor on the last data row
+            return f"{letter}{ref_row}"
+        if modifier == "last:":
+            return f"{letter}{last_data_row}"
+        return f"{letter}{row}"
+
+    return re.sub(r'\[(prev:|next:|last:)?(\w+)\]', _replace, template)
+
+
+def _write_formula_ref_sheet(
+    wb: Workbook,
+    formula_reg: Dict[str, Dict[str, ColFormula]],
+) -> None:
+    """
+    Write a 'Formula Reference' sheet listing every column formula across all sheets.
+
+    Users can open this sheet to see the full derivation chain for any column
+    without having to click through individual cells.
+    """
+    ws = wb.create_sheet("Formula Reference")
+    ws.sheet_properties.tabColor = "2E75B6"   # medium blue
+
+    hdr_fill = PatternFill("solid", fgColor="D6E4F0")
+    hdr_font = Font(bold=True, color="000000", size=10)
+    hdr_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    thin_bottom = Border(bottom=Side(style="medium", color="000000"))
+
+    headers = ["Sheet", "Column", "Formula (first row)", "Recurrent formula (row 2+)", "Description", "Source"]
+    ws.append(headers)
+    ws.row_dimensions[1].height = 28
+    for col_idx, _ in enumerate(headers, 1):
+        cell = ws.cell(1, col_idx)
+        cell.fill      = hdr_fill
+        cell.font      = hdr_font
+        cell.alignment = hdr_align
+        cell.border    = thin_bottom
+
+    alt_fill = PatternFill("solid", fgColor="F0F7FF")
+    alt = False
+    for sheet_name, cols in sorted(formula_reg.items()):
+        for col_name, cf in sorted(cols.items()):
+            alt = not alt
+            recurrent = cf.rest_rows if cf.is_recurrent else ""
+            row_data = [sheet_name, col_name, cf.first_row, recurrent, cf.description, cf.source]
+            ws.append(row_data)
+            r = ws.max_row
+            fill = alt_fill if alt else None
+            for c_idx, val in enumerate(row_data, 1):
+                cell = ws.cell(r, c_idx)
+                if fill:
+                    cell.fill = fill
+                cell.alignment = Alignment(
+                    horizontal="left", vertical="top", wrap_text=True
+                )
+                cell.font = Font(size=9)
+
+    # Column widths
+    for col_letter, width in zip("ABCDEF", [22, 22, 40, 40, 55, 30]):
+        ws.column_dimensions[col_letter].width = width
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = f"A1:F1"
 
 
 def _write_warnings_sheet(wb: Workbook) -> None:
