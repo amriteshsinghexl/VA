@@ -1,0 +1,39 @@
+{
+  "label": "VA",
+  "run": {
+    "script": "run.py",
+    "singleFlag": "--policy-id",
+    "outputFlag": "--output-dir",
+    "deviceFlag": null,
+    "modeFlag": null,
+    "monthsFlag": "--months",
+    "fixedArgs": [
+      ["--policy-path", "data/Input_PolicyDataRaw.xlsx"],
+      ["--assumptions-path", "data/Assumptions_Extracted.xlsx"]
+    ]
+  },
+  "data": {
+    "kind": "external",
+    "file": "data/Input_PolicyDataRaw.xlsx"
+  },
+  "assumptions": {
+    "kind": "xlsx-sheets",
+    "file": "data/Assumptions_Extracted.xlsx"
+  },
+  "results": {
+    "kind": "xlsx-tree",
+    "dir": "results"
+  },
+  "ui": {
+    "months": true,
+    "monthsDefault": 480,
+    "idLabel": "Policy ID",
+    "idType": "text",
+    "idPlaceholder": "e.g. 842612365",
+    "runTypeLabels": {
+      "portfolio": "All Policies",
+      "single": "Single Policy"
+    },
+    "runButton": "Run VA Model"
+  }
+}
